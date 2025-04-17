@@ -5,12 +5,14 @@ import { Copy, Download, File, FileText, Image, Music, Video } from "lucide-reac
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { FileUploadResult } from "@/services/fileService";
 
 interface FileListProps {
-  files: any[];
+  files: FileUploadResult[];
+  isLoading?: boolean;
 }
 
-export const FileList = ({ files }: FileListProps) => {
+export const FileList = ({ files, isLoading = false }: FileListProps) => {
   const copyToClipboard = (link: string) => {
     navigator.clipboard.writeText(link);
     toast({
@@ -34,6 +36,26 @@ export const FileList = ({ files }: FileListProps) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((index) => (
+          <Card key={index} className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="flex items-center p-4">
+                <div className="mr-4 h-10 w-10 rounded-md bg-muted animate-pulse"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                  <div className="h-3 bg-muted rounded animate-pulse w-1/2"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   if (files.length === 0) {
     return (

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Download, FileText, File, Image, Music, Video } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { getFileByShareId } from "@/services/fileService";
 
 const DownloadPage = () => {
   const { fileId } = useParams<{ fileId: string }>();
@@ -13,28 +14,19 @@ const DownloadPage = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // In a real app, we would fetch the file data from an API
-    const fetchFile = () => {
+    const fetchFile = async () => {
       setLoading(true);
       
       try {
-        // For now, get from localStorage
-        const storedFiles = localStorage.getItem("uploadedFiles");
-        if (storedFiles) {
-          const files = JSON.parse(storedFiles);
-          const foundFile = files.find((f: any) => f.id === fileId);
-          
-          if (foundFile) {
-            setFile(foundFile);
-          } else {
-            setError("File not found");
-          }
-        } else {
-          setError("File not found");
+        if (!fileId) {
+          throw new Error("File ID is required");
         }
-      } catch (err) {
+        
+        const fileData = await getFileByShareId(fileId);
+        setFile(fileData);
+      } catch (err: any) {
         console.error("Error fetching file:", err);
-        setError("An error occurred while fetching the file");
+        setError(err.message || "An error occurred while fetching the file");
       } finally {
         setLoading(false);
       }
@@ -61,9 +53,9 @@ const DownloadPage = () => {
   };
 
   const handleDownload = () => {
-    // In a real app, this would start the file download
-    // For this demo, we'll just simulate it
-    alert("Download started! In a real app, this would download the file.");
+    if (file?.url) {
+      window.open(file.url, "_blank");
+    }
   };
 
   return (

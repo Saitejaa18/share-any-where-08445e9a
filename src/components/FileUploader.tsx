@@ -7,9 +7,10 @@ import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { uploadFile, FileUploadResult } from "@/services/fileService";
 
 interface FileUploaderProps {
-  onFileUpload: (file: File) => any;
+  onFileUpload: (file: FileUploadResult) => void;
 }
 
 export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
@@ -17,7 +18,8 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<any>(null);
+  const [uploadedFile, setUploadedFile] = useState<FileUploadResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,27 +47,44 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
     }
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     setUploading(true);
     setProgress(0);
+    setError(null);
     
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploading(false);
-          
-          // Process the uploaded file
-          const fileData = onFileUpload(file);
-          setUploadedFile(fileData);
-          setShowSuccessDialog(true);
-          
-          return 100;
-        }
-        return prev + 10;
+    try {
+      // Simulate progress while actually uploading
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 300);
+      
+      // Upload the file to Supabase
+      const fileData = await uploadFile(file);
+      
+      // Complete the progress bar
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      // Update state and show success dialog
+      setUploadedFile(fileData);
+      onFileUpload(fileData);
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      setError(error.message || "An error occurred during upload");
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error.message || "An error occurred during upload"
       });
-    }, 300);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const copyToClipboard = () => {

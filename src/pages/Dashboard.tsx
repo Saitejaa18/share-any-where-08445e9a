@@ -1,63 +1,42 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
 import { FileList } from "@/components/FileList";
 import { LogOut, Plus, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
+import { getUserFiles, FileUploadResult } from "@/services/fileService";
+import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [files, setFiles] = useState<any[]>([]);
-  const navigate = useNavigate();
+  const [files, setFiles] = useState<FileUploadResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-    if (!isAuthenticated) {
-      navigate("/login");
-    }
-    
-    // In a real app, we would fetch files from an API
-    const mockFiles = localStorage.getItem("uploadedFiles");
-    if (mockFiles) {
-      setFiles(JSON.parse(mockFiles));
-    }
-  }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    navigate("/login");
-  };
-
-  const handleFileUpload = (file: File) => {
-    // Create a unique ID for the file
-    const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-    
-    // Create a file URL (in a real app, this would be a URL to the file stored on a server)
-    const fileUrl = `/file/${fileId}`;
-    
-    // Create a shareable link
-    const shareableLink = `${window.location.origin}/download/${fileId}`;
-    
-    const newFile = {
-      id: fileId,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: fileUrl,
-      shareableLink,
-      uploadedAt: new Date().toISOString(),
+    const fetchFiles = async () => {
+      try {
+        setIsLoading(true);
+        const userFiles = await getUserFiles();
+        setFiles(userFiles);
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching files",
+          description: error.message || "Failed to load your files"
+        });
+        console.error("Error fetching files:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    
-    const updatedFiles = [...files, newFile];
-    setFiles(updatedFiles);
-    
-    // In a real app, we would upload the file to a server
-    // For now, just store it in localStorage
-    localStorage.setItem("uploadedFiles", JSON.stringify(updatedFiles));
-    
-    return newFile;
+
+    fetchFiles();
+  }, []);
+
+  const handleFileUpload = (fileData: FileUploadResult) => {
+    setFiles(prevFiles => [fileData, ...prevFiles]);
   };
 
   return (
@@ -69,9 +48,9 @@ const Dashboard = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-white">
               <User size={20} />
-              <span>User</span>
+              <span>{user?.user_metadata?.full_name || user?.email}</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={signOut} className="text-white hover:bg-white/10">
               <LogOut size={20} />
             </Button>
           </div>
@@ -90,7 +69,7 @@ const Dashboard = () => {
         <div className="grid gap-8 md:grid-cols-[1fr_300px]">
           {/* File list */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <FileList files={files} />
+            <FileList files={files} isLoading={isLoading} />
           </div>
           
           {/* Upload widget */}

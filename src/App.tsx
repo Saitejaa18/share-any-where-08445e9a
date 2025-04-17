@@ -12,6 +12,7 @@ import Download from "./pages/Download";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NearbyConnect from "./pages/NearbyConnect";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const AppRoutes = () => (
       </ProtectedRoute>
     } />
     <Route path="/download/:fileId" element={<Download />} />
+    <Route path="/nearby" element={<NearbyConnect />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
     <Route path="*" element={<NotFound />} />
   </Routes>

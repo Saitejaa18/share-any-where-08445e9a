@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,9 @@ import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Copy, Scan } from "lucide-react";
+import { Copy, Scan, FileUp, Send, FilePlus, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 export const NearbyConnection = () => {
   const [activeTab, setActiveTab] = useState<"qrcode" | "pin">("qrcode");
@@ -17,6 +19,11 @@ export const NearbyConnection = () => {
   const [pin, setPin] = useState<string>("");
   const [enteredPin, setEnteredPin] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileShareOpen, setFileShareOpen] = useState<boolean>(false);
+  const [transferProgress, setTransferProgress] = useState<number>(0);
+  const [isTransferring, setIsTransferring] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate a new connection ID and PIN on component mount or when tab changes
   useEffect(() => {
@@ -31,6 +38,7 @@ export const NearbyConnection = () => {
     const newId = uuidv4();
     setConnectionId(newId);
     setIsConnected(false);
+    setSelectedFile(null);
   };
 
   const generateNewPin = () => {
@@ -38,6 +46,7 @@ export const NearbyConnection = () => {
     const newPin = Math.floor(100000 + Math.random() * 900000).toString();
     setPin(newPin);
     setIsConnected(false);
+    setSelectedFile(null);
   };
 
   const handlePinSubmit = () => {
@@ -70,6 +79,58 @@ export const NearbyConnection = () => {
       title: "Connected successfully!",
       description: "Simulated connection established.",
     });
+  };
+
+  const handleFileSelection = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const startFileTransfer = () => {
+    if (!selectedFile) {
+      toast({
+        variant: "destructive",
+        title: "No file selected",
+        description: "Please select a file to share.",
+      });
+      return;
+    }
+
+    setFileShareOpen(true);
+    setIsTransferring(true);
+    setTransferProgress(0);
+
+    // Simulate file transfer
+    const interval = setInterval(() => {
+      setTransferProgress((prev) => {
+        const newProgress = prev + Math.random() * 10;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setIsTransferring(false);
+            toast({
+              title: "File transferred successfully!",
+              description: `${selectedFile.name} has been sent to the connected device.`,
+            });
+          }, 500);
+          return 100;
+        }
+        return newProgress;
+      });
+    }, 300);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -161,6 +222,44 @@ export const NearbyConnection = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {isConnected && (
+          <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-md">
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium mb-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              Connected to nearby device
+            </div>
+            
+            <div className="space-y-4">
+              <Label>Select a file to share:</Label>
+              <div className="flex flex-col gap-3">
+                <input 
+                  type="file" 
+                  className="sr-only" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange}
+                />
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={handleFileSelection}
+                >
+                  <FilePlus size={16} /> {selectedFile ? "Change File" : "Select File"}
+                </Button>
+                
+                {selectedFile && (
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
+                    <FileText size={20} className="text-blue-500" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button
@@ -171,11 +270,47 @@ export const NearbyConnection = () => {
         </Button>
         
         {isConnected && (
-          <Button>
-            Start Sharing
+          <Button onClick={startFileTransfer} disabled={!selectedFile} className="flex items-center gap-2">
+            <Send size={16} /> 
+            Share File
           </Button>
         )}
       </CardFooter>
+
+      <Dialog open={fileShareOpen} onOpenChange={setFileShareOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transferring File</DialogTitle>
+            <DialogDescription>
+              Sending the selected file to the connected device.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3">
+              <FileText size={20} className="text-blue-500" />
+              <div>
+                <p className="font-medium">{selectedFile?.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedFile && formatFileSize(selectedFile.size)}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Progress</span>
+                <span>{Math.round(transferProgress)}%</span>
+              </div>
+              <Progress value={transferProgress} className="h-2" />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFileShareOpen(false)} disabled={isTransferring}>
+              {isTransferring ? "Transferring..." : "Close"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

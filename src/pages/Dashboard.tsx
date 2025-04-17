@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
 import { FileList } from "@/components/FileList";
-import { LogOut, Plus, User } from "lucide-react";
+import { LogOut, Plus, User, Share2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { getUserFiles, FileUploadResult } from "@/services/fileService";
 import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const [files, setFiles] = useState<FileUploadResult[]>([]);
@@ -61,9 +62,16 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="mb-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold">Your Files</h1>
-          <Button onClick={() => document.getElementById("file-upload-button")?.click()}>
-            <Plus className="mr-2 h-4 w-4" /> Upload New File
-          </Button>
+          <div className="flex gap-3">
+            <Button asChild variant="outline">
+              <Link to="/nearby" className="flex items-center gap-2">
+                <Share2 className="h-4 w-4" /> Nearby Share
+              </Link>
+            </Button>
+            <Button onClick={() => document.getElementById("file-upload-button")?.click()}>
+              <Plus className="mr-2 h-4 w-4" /> Upload New File
+            </Button>
+          </div>
         </div>
         
         <div className="grid gap-8 md:grid-cols-[1fr_300px]">

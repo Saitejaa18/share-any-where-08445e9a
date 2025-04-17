@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { FileUp, Download, Shield, Share2 } from "lucide-react";
@@ -27,9 +26,16 @@ const Index = () => {
           </div>
           <div className="space-x-4">
             {isAuthenticated ? (
-              <Button asChild>
-                <Link to="/dashboard">Go to Dashboard</Link>
-              </Button>
+              <>
+                <Button variant="outline" asChild>
+                  <Link to="/nearby" className="flex items-center gap-2">
+                    <Share2 className="h-4 w-4" /> Nearby Share
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/dashboard">Go to Dashboard</Link>
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="ghost" asChild>
@@ -57,9 +63,15 @@ const Index = () => {
                 {isAuthenticated ? "Go to Dashboard" : "Get Started - It's Free"}
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10" asChild>
-              <Link to="/login">Already have an account?</Link>
-            </Button>
+            {isAuthenticated ? (
+              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10" asChild>
+                <Link to="/nearby">Share with Nearby Devices</Link>
+              </Button>
+            ) : (
+              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10" asChild>
+                <Link to="/login">Already have an account?</Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -87,6 +99,16 @@ const Index = () => {
               <h3 className="text-xl font-semibold mb-3">Instant Sharing</h3>
               <p className="text-muted-foreground">
                 Get a unique link immediately after uploading. Share via email, messaging apps, or social media.
+              </p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm border text-center">
+              <div className="rounded-full bg-primary/10 p-3 w-fit mx-auto mb-4">
+                <Share2 className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Nearby Sharing</h3>
+              <p className="text-muted-foreground">
+                Connect and share files with nearby devices using QR codes or PIN codes. No internet required!
               </p>
             </div>
             

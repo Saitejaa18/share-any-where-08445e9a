@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FilePlus, FileText } from "lucide-react";
 import { formatFileSize } from "@/utils/fileUtils";
+import { toast } from "@/hooks/use-toast";
 
 interface FileSelectionProps {
   selectedFile: File | null;
@@ -19,7 +20,20 @@ export const FileSelection = ({ selectedFile, setSelectedFile }: FileSelectionPr
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      
+      // Check file size (2GB limit)
+      const maxSize = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+      if (file.size > maxSize) {
+        toast({
+          variant: "destructive",
+          title: "File too large",
+          description: "The maximum file size is 2GB. Please select a smaller file.",
+        });
+        return;
+      }
+      
+      setSelectedFile(file);
     }
   };
 
@@ -50,6 +64,7 @@ export const FileSelection = ({ selectedFile, setSelectedFile }: FileSelectionPr
             </div>
           </div>
         )}
+        <p className="text-xs text-muted-foreground">Maximum file size: 2GB</p>
       </div>
     </div>
   );

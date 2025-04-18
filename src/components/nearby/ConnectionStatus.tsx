@@ -29,6 +29,16 @@ export const ConnectionStatus = ({
         selectedFile={selectedFile} 
         setSelectedFile={setSelectedFile} 
       />
+
+      <div className="mt-4">
+        <Button 
+          onClick={startFileTransfer} 
+          disabled={!selectedFile} 
+          className="w-full flex items-center justify-center gap-2"
+        >
+          <Send size={16} /> Send File
+        </Button>
+      </div>
     </div>
   );
 };

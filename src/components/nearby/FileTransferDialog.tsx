@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { FileText } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { formatFileSize } from "@/utils/fileUtils";
 
 interface FileTransferDialogProps {
@@ -21,7 +21,13 @@ export const FileTransferDialog = ({
   isTransferring
 }: FileTransferDialogProps) => {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newState) => {
+      // Prevent closing dialog during active transfer
+      if (isTransferring && newState === false) {
+        return;
+      }
+      onOpenChange(newState);
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Transferring File</DialogTitle>
@@ -48,6 +54,15 @@ export const FileTransferDialog = ({
             </div>
             <Progress value={transferProgress} className="h-2" />
           </div>
+
+          {isTransferring && (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+              <p className="text-sm text-muted-foreground">
+                {transferProgress < 100 ? "Transferring..." : "Finalizing transfer..."}
+              </p>
+            </div>
+          )}
         </div>
         
         <DialogFooter>

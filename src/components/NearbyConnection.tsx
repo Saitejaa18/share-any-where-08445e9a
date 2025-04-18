@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Send } from "lucide-react";
+import { transferFile } from "@/utils/fileUtils";
 
 // Import refactored components
 import { QRCodeTab } from "./nearby/QRCodeTab";
@@ -20,11 +21,12 @@ export const NearbyConnection = () => {
   const [fileShareOpen, setFileShareOpen] = useState<boolean>(false);
   const [transferProgress, setTransferProgress] = useState<number>(0);
   const [isTransferring, setIsTransferring] = useState<boolean>(false);
+  const [connectedDeviceId, setConnectedDeviceId] = useState<string>("");
 
   const handlePinSubmit = () => {
-    // In the refactored version, we're simulating a successful PIN match
     // In a real implementation, you would validate the entered PIN
     setIsConnected(true);
+    setConnectedDeviceId(`device-${Math.floor(Math.random() * 10000)}`);
     toast({
       title: "Connected successfully!",
       description: "You are now connected with the nearby device.",
@@ -33,6 +35,7 @@ export const NearbyConnection = () => {
 
   const simulateConnection = () => {
     setIsConnected(true);
+    setConnectedDeviceId(`device-${Math.floor(Math.random() * 10000)}`);
     toast({
       title: "Connected successfully!",
       description: "Simulated connection established.",
@@ -53,29 +56,51 @@ export const NearbyConnection = () => {
     setIsTransferring(true);
     setTransferProgress(0);
 
-    // Simulate file transfer
-    const interval = setInterval(() => {
-      setTransferProgress((prev) => {
-        const newProgress = prev + Math.random() * 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
+    // Simulate real file transfer with chunking
+    const chunks = Math.ceil(selectedFile.size / (1024 * 1024));
+    const totalChunks = Math.max(chunks, 10); // At least 10 chunks for visual feedback
+    let currentChunk = 0;
+
+    const chunkInterval = setInterval(() => {
+      currentChunk++;
+      const newProgress = (currentChunk / totalChunks) * 100;
+      setTransferProgress(newProgress);
+      
+      if (currentChunk >= totalChunks) {
+        clearInterval(chunkInterval);
+        // Actually attempt to transfer file
+        transferFile(selectedFile, connectedDeviceId)
+          .then((success) => {
+            setIsTransferring(false);
+            if (success) {
+              toast({
+                title: "File transferred successfully!",
+                description: `${selectedFile.name} has been sent to the connected device.`,
+              });
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Transfer failed",
+                description: "The file transfer was unsuccessful. Please try again.",
+              });
+            }
+          })
+          .catch(() => {
             setIsTransferring(false);
             toast({
-              title: "File transferred successfully!",
-              description: `${selectedFile.name} has been sent to the connected device.`,
+              variant: "destructive",
+              title: "Transfer error",
+              description: "An error occurred during file transfer.",
             });
-          }, 500);
-          return 100;
-        }
-        return newProgress;
-      });
+          });
+      }
     }, 300);
   };
 
   const generateNewCode = () => {
     setIsConnected(false);
     setSelectedFile(null);
+    setConnectedDeviceId("");
   };
 
   return (
@@ -120,13 +145,6 @@ export const NearbyConnection = () => {
         >
           Generate New {activeTab === "qrcode" ? "Code" : "PIN"}
         </Button>
-        
-        {isConnected && (
-          <Button onClick={startFileTransfer} disabled={!selectedFile} className="flex items-center gap-2">
-            <Send size={16} /> 
-            Share File
-          </Button>
-        )}
       </CardFooter>
 
       <FileTransferDialog 

@@ -24,13 +24,15 @@ export const NearbyConnection = () => {
   const [connectedDeviceId, setConnectedDeviceId] = useState<string>("");
 
   const handlePinSubmit = () => {
-    // In a real implementation, you would validate the entered PIN
-    setIsConnected(true);
-    setConnectedDeviceId(`device-${Math.floor(Math.random() * 10000)}`);
-    toast({
-      title: "Connected successfully!",
-      description: "You are now connected with the nearby device.",
-    });
+    if (enteredPin.length === 6) {
+      // In a real implementation, you would validate the entered PIN against a server
+      setIsConnected(true);
+      setConnectedDeviceId(`device-${Math.floor(Math.random() * 10000)}`);
+      toast({
+        title: "Connected successfully!",
+        description: "You are now connected with the nearby device. Ready to share files.",
+      });
+    }
   };
 
   const simulateConnection = () => {
@@ -38,7 +40,7 @@ export const NearbyConnection = () => {
     setConnectedDeviceId(`device-${Math.floor(Math.random() * 10000)}`);
     toast({
       title: "Connected successfully!",
-      description: "Simulated connection established.",
+      description: "Simulated connection established. Ready to share files.",
     });
   };
 
@@ -52,38 +54,54 @@ export const NearbyConnection = () => {
       return;
     }
 
+    // Check if file is too large (over 2GB)
+    if (selectedFile.size > 2 * 1024 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Maximum file size is 2GB.",
+      });
+      return;
+    }
+
     setFileShareOpen(true);
     setIsTransferring(true);
     setTransferProgress(0);
 
-    // Simulate real file transfer with chunking
-    const chunks = Math.ceil(selectedFile.size / (1024 * 1024));
-    const totalChunks = Math.max(chunks, 10); // At least 10 chunks for visual feedback
+    // Calculate chunks based on the file size
+    // Larger files will have more chunks for smoother visual progress
+    const chunkSize = 1024 * 1024; // 1MB chunks
+    const totalChunks = Math.max(Math.ceil(selectedFile.size / chunkSize), 20);
     let currentChunk = 0;
 
     const chunkInterval = setInterval(() => {
       currentChunk++;
       const newProgress = (currentChunk / totalChunks) * 100;
-      setTransferProgress(newProgress);
+      setTransferProgress(Math.min(newProgress, 99)); // Cap at 99% until complete
       
       if (currentChunk >= totalChunks) {
         clearInterval(chunkInterval);
+        
         // Actually attempt to transfer file
         transferFile(selectedFile, connectedDeviceId)
           .then((success) => {
-            setIsTransferring(false);
-            if (success) {
-              toast({
-                title: "File transferred successfully!",
-                description: `${selectedFile.name} has been sent to the connected device.`,
-              });
-            } else {
-              toast({
-                variant: "destructive",
-                title: "Transfer failed",
-                description: "The file transfer was unsuccessful. Please try again.",
-              });
-            }
+            setTransferProgress(100);
+            setTimeout(() => {
+              setIsTransferring(false);
+              if (success) {
+                toast({
+                  title: "File transferred successfully!",
+                  description: `${selectedFile.name} has been sent to the connected device.`,
+                });
+                setSelectedFile(null); // Clear the file selection after successful transfer
+              } else {
+                toast({
+                  variant: "destructive",
+                  title: "Transfer failed",
+                  description: "The file transfer was unsuccessful. Please try again.",
+                });
+              }
+            }, 500);
           })
           .catch(() => {
             setIsTransferring(false);
@@ -94,13 +112,14 @@ export const NearbyConnection = () => {
             });
           });
       }
-    }, 300);
+    }, 100);
   };
 
   const generateNewCode = () => {
     setIsConnected(false);
     setSelectedFile(null);
     setConnectedDeviceId("");
+    setEnteredPin("");
   };
 
   return (

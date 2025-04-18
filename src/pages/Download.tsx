@@ -3,15 +3,18 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Download, FileText, File, Image, Music, Video } from "lucide-react";
+import { Download, FileText, File, Image, Music, Video, AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { getFileByShareId } from "@/services/fileService";
+import { toast } from "@/hooks/use-toast";
 
 const DownloadPage = () => {
   const { fileId } = useParams<{ fileId: string }>();
   const [file, setFile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [linkExpired, setLinkExpired] = useState(false);
+  const [downloadStarted, setDownloadStarted] = useState(false);
 
   useEffect(() => {
     const fetchFile = async () => {
@@ -26,7 +29,14 @@ const DownloadPage = () => {
         setFile(fileData);
       } catch (err: any) {
         console.error("Error fetching file:", err);
-        setError(err.message || "An error occurred while fetching the file");
+        
+        // Check if the error is due to an expired link
+        if (err.message.includes("not found") || err.message.includes("expired")) {
+          setLinkExpired(true);
+          setError("This download link has expired or has already been used");
+        } else {
+          setError(err.message || "An error occurred while fetching the file");
+        }
       } finally {
         setLoading(false);
       }
@@ -54,6 +64,14 @@ const DownloadPage = () => {
 
   const handleDownload = () => {
     if (file?.url) {
+      setDownloadStarted(true);
+      
+      // Show a toast to notify the user that this is a one-time link
+      toast({
+        title: "File download started",
+        description: "Note: This is a one-time download link and will expire after use.",
+      });
+      
       window.open(file.url, "_blank");
     }
   };
@@ -81,12 +99,14 @@ const DownloadPage = () => {
                   <div className="h-3 bg-muted rounded w-1/2"></div>
                 </div>
               </div>
-            ) : error ? (
+            ) : linkExpired || error ? (
               <div className="text-center p-8">
-                <File className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <AlertTriangle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-destructive">{error}</h3>
                 <p className="text-muted-foreground mt-2">
-                  The file you're looking for doesn't exist or has been removed.
+                  {linkExpired 
+                    ? "This download link has expired or has already been used." 
+                    : "The file you're looking for doesn't exist or has been removed."}
                 </p>
               </div>
             ) : (
@@ -101,18 +121,23 @@ const DownloadPage = () => {
                 
                 <div className="bg-muted p-4 rounded-lg mb-6">
                   <p className="text-sm">
-                    This file was shared with you via ShareAnyWhere. Click the button below to download it.
+                    This file was shared with you via ShareAnyWhere. This is a one-time download link.
                   </p>
                 </div>
               </div>
             )}
           </CardContent>
           
-          {!loading && !error && (
+          {!loading && !error && !linkExpired && (
             <CardFooter className="flex justify-center pb-6">
-              <Button size="lg" onClick={handleDownload} className="w-full">
+              <Button 
+                size="lg" 
+                onClick={handleDownload} 
+                className="w-full"
+                disabled={downloadStarted}
+              >
                 <Download className="mr-2 h-4 w-4" />
-                Download File
+                {downloadStarted ? "Download Started..." : "Download File"}
               </Button>
             </CardFooter>
           )}

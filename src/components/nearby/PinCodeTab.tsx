@@ -34,6 +34,23 @@ export const PinCodeTab = ({ onPinSubmit, enteredPin, setEnteredPin }: PinCodeTa
     });
   };
 
+  const handlePinSubmit = () => {
+    if (enteredPin.length !== 6) {
+      toast({
+        variant: "destructive",
+        title: "Invalid PIN",
+        description: "Please enter a valid 6-digit PIN.",
+      });
+      return;
+    }
+    
+    onPinSubmit();
+    toast({
+      title: "Connected!",
+      description: "Successfully connected to the other device. Ready to receive files.",
+    });
+  };
+
   return (
     <div className="space-y-4 mt-4">
       <div className="space-y-4">
@@ -61,8 +78,11 @@ export const PinCodeTab = ({ onPinSubmit, enteredPin, setEnteredPin }: PinCodeTa
               value={enteredPin}
               onChange={(e) => setEnteredPin(e.target.value)}
               maxLength={6}
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
-            <Button onClick={onPinSubmit}>
+            <Button onClick={handlePinSubmit}>
               Connect
             </Button>
           </div>

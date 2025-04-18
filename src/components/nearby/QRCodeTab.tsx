@@ -63,6 +63,7 @@ export const QRCodeTab = ({ simulateConnection }: QRCodeTabProps) => {
       videoRef.current.srcObject = stream;
       setScanning(true);
 
+      // Start scanning for QR codes
       scanIntervalRef.current = window.setInterval(() => {
         scanQRCode();
       }, 500) as unknown as number;
@@ -107,20 +108,18 @@ export const QRCodeTab = ({ simulateConnection }: QRCodeTabProps) => {
 
     try {
       // In a real implementation, you would use a QR code scanning library here
-      // For this demo, we'll simulate a successful scan after 3 seconds
+      // For this demo, we'll simulate a successful scan after a short delay
       setTimeout(() => {
         if (scanning) {
-          const scannedId = uuidv4(); // Simulate finding a QR code
-          console.log("QR code scanned:", scannedId);
           stopCamera();
           setIsCameraOpen(false);
           simulateConnection();
           toast({
             title: "QR Code Scanned!",
-            description: "Connection successful.",
+            description: "Connection successful. Ready to receive files.",
           });
         }
-      }, 3000);
+      }, 1500);
     } catch (error) {
       console.error("QR scanning error:", error);
     }
@@ -128,6 +127,7 @@ export const QRCodeTab = ({ simulateConnection }: QRCodeTabProps) => {
 
   const handleOpenCamera = () => {
     setIsCameraOpen(true);
+    // Small delay to ensure dialog is rendered before accessing camera
     setTimeout(() => {
       startCamera();
     }, 500);

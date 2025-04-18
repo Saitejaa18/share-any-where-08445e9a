@@ -46,7 +46,9 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
         file_path: filePath,
         file_size: file.size,
         file_type: file.type,
-        share_id: shareId
+        share_id: shareId,
+        is_link_active: true,
+        max_downloads: 1 // Set to 1 for one-time use links
       });
     
     if (dbError) {
@@ -78,14 +80,17 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
 
 export const getUserFiles = async () => {
   try {
+    // Get current user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       return [];
     }
     
+    // Only retrieve files for the current user
     const { data: files, error } = await supabase
       .from('file_shares')
       .select('*')
+      .eq('user_id', session.user.id) // Only get current user's files
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -104,7 +109,8 @@ export const getUserFiles = async () => {
         type: file.file_type,
         url: publicUrl,
         shareableLink: `${window.location.origin}/download/${file.share_id}`,
-        uploadedAt: file.created_at
+        uploadedAt: file.created_at,
+        isLinkActive: file.is_link_active
       };
     });
   } catch (error) {
@@ -119,6 +125,7 @@ export const getFileByShareId = async (shareId: string) => {
       .from('file_shares')
       .select('*')
       .eq('share_id', shareId)
+      .eq('is_link_active', true) // Only get active links
       .single();
     
     if (error) {
@@ -126,14 +133,22 @@ export const getFileByShareId = async (shareId: string) => {
     }
     
     if (!file) {
-      throw new Error("File not found");
+      throw new Error("File not found or link expired");
     }
     
     // Increment download counter
-    await supabase
+    const { error: updateError } = await supabase
       .from('file_shares')
-      .update({ downloads: file.downloads + 1 })
+      .update({ 
+        downloads: file.downloads + 1,
+        // Deactivate link if reached max downloads (one-time use)
+        is_link_active: file.max_downloads > (file.downloads + 1)
+      })
       .eq('id', file.id);
+    
+    if (updateError) {
+      console.error("Error updating download count:", updateError);
+    }
     
     // Get the download URL
     const { data: { publicUrl } } = supabase.storage

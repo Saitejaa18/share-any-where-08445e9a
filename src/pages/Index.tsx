@@ -1,19 +1,16 @@
+
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { FileUp, Download, Shield, Share2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/context/AuthContext";
 
 const Index = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check if user is already authenticated
-    const authStatus = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(authStatus);
-  }, []);
+  const isAuthenticated = !!user;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -88,7 +85,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold mb-3">Easy Upload</h3>
               <p className="text-muted-foreground">
-                Drag and drop your files or select them from your device. Supports files up to 100MB.
+                Drag and drop your files or select them from your device. Supports files up to 2GB.
               </p>
             </div>
             

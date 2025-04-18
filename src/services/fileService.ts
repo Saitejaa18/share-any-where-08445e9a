@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 
@@ -10,6 +9,7 @@ export interface FileUploadResult {
   url: string;
   shareableLink: string;
   uploadedAt: string;
+  isLinkActive?: boolean;
 }
 
 export const uploadFile = async (file: File): Promise<FileUploadResult> => {
@@ -48,7 +48,8 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
         file_type: file.type,
         share_id: shareId,
         is_link_active: true,
-        max_downloads: 1 // Set to 1 for one-time use links
+        max_downloads: 1,
+        downloads: 0
       });
     
     if (dbError) {
@@ -70,7 +71,8 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
       type: file.type,
       url: publicUrl,
       shareableLink,
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
+      isLinkActive: true
     };
   } catch (error) {
     console.error("File upload error:", error);
@@ -90,29 +92,23 @@ export const getUserFiles = async () => {
     const { data: files, error } = await supabase
       .from('file_shares')
       .select('*')
-      .eq('user_id', session.user.id) // Only get current user's files
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
     
     if (error) {
       throw error;
     }
     
-    return files.map(file => {
-      const { data: { publicUrl } } = supabase.storage
-        .from('files')
-        .getPublicUrl(file.file_path);
-      
-      return {
-        id: file.id,
-        name: file.filename,
-        size: file.file_size,
-        type: file.file_type,
-        url: publicUrl,
-        shareableLink: `${window.location.origin}/download/${file.share_id}`,
-        uploadedAt: file.created_at,
-        isLinkActive: file.is_link_active
-      };
-    });
+    return files.map(file => ({
+      id: file.id,
+      name: file.filename,
+      size: file.file_size,
+      type: file.file_type,
+      url: supabase.storage.from('files').getPublicUrl(file.file_path).data.publicUrl,
+      shareableLink: `${window.location.origin}/download/${file.share_id}`,
+      uploadedAt: file.created_at,
+      isLinkActive: file.is_link_active
+    }));
   } catch (error) {
     console.error("Error fetching user files:", error);
     throw error;
@@ -125,7 +121,7 @@ export const getFileByShareId = async (shareId: string) => {
       .from('file_shares')
       .select('*')
       .eq('share_id', shareId)
-      .eq('is_link_active', true) // Only get active links
+      .eq('is_link_active', true)
       .single();
     
     if (error) {
@@ -136,12 +132,11 @@ export const getFileByShareId = async (shareId: string) => {
       throw new Error("File not found or link expired");
     }
     
-    // Increment download counter
+    // Increment download counter and update link status
     const { error: updateError } = await supabase
       .from('file_shares')
       .update({ 
         downloads: file.downloads + 1,
-        // Deactivate link if reached max downloads (one-time use)
         is_link_active: file.max_downloads > (file.downloads + 1)
       })
       .eq('id', file.id);
@@ -150,7 +145,6 @@ export const getFileByShareId = async (shareId: string) => {
       console.error("Error updating download count:", updateError);
     }
     
-    // Get the download URL
     const { data: { publicUrl } } = supabase.storage
       .from('files')
       .getPublicUrl(file.file_path);
@@ -162,7 +156,8 @@ export const getFileByShareId = async (shareId: string) => {
       type: file.file_type,
       url: publicUrl,
       uploadedAt: file.created_at,
-      downloads: file.downloads + 1
+      downloads: file.downloads + 1,
+      isLinkActive: file.is_link_active
     };
   } catch (error) {
     console.error("Error fetching file:", error);

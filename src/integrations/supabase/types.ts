@@ -18,6 +18,8 @@ export type Database = {
           file_type: string
           filename: string
           id: string
+          is_link_active: boolean
+          max_downloads: number
           share_id: string
           user_id: string
         }
@@ -29,6 +31,8 @@ export type Database = {
           file_type: string
           filename: string
           id?: string
+          is_link_active?: boolean
+          max_downloads?: number
           share_id: string
           user_id: string
         }
@@ -40,6 +44,8 @@ export type Database = {
           file_type?: string
           filename?: string
           id?: string
+          is_link_active?: boolean
+          max_downloads?: number
           share_id?: string
           user_id?: string
         }

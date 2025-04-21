@@ -7,8 +7,8 @@ import { toast } from "@/hooks/use-toast";
 import { QRCodeScanner } from "./QRCodeScanner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { 
-  Search, // Lucide icons allowed
-  "qr-code" as QrCode, // use as QrCode
+  Search,
+  QrCode, 
 } from "lucide-react";
 
 interface NearbyDevicesProps {

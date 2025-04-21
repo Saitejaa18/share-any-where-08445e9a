@@ -1,49 +1,32 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
 import { FileList } from "@/components/FileList";
-import { LogOut, Plus, User, Share2 } from "lucide-react";
+import { LogOut, Plus, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
-import { getUserFiles, FileUploadResult } from "@/services/fileService";
+import { FileUploadResult } from "@/services/fileService";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 
+const pastelGradient = "bg-gradient-to-br from-[#e5defc] to-[#fbc2eb]";
+const glassCard = "backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl shadow-xl";
+
 const Dashboard = () => {
   const [files, setFiles] = useState<FileUploadResult[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { user, signOut } = useAuth();
 
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
-        setIsLoading(true);
-        const userFiles = await getUserFiles();
-        setFiles(userFiles);
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching files",
-          description: error.message || "Failed to load your files"
-        });
-        console.error("Error fetching files:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFiles();
-  }, []);
+  // No useEffect: We do NOT fetch user's previously uploaded files.
 
   const handleFileUpload = (fileData: FileUploadResult) => {
     setFiles(prevFiles => [fileData, ...prevFiles]);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted">
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)" }}>
       {/* Header */}
-      <header className="bg-gradient-to-r from-brand-purple to-brand-purple-dark shadow-md py-4">
+      <header className="bg-gradient-to-r from-brand-purple to-brand-purple-dark shadow-md py-4 rounded-b-2xl glassCard">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <Logo />
           <div className="flex items-center gap-4">
@@ -59,37 +42,32 @@ const Dashboard = () => {
       </header>
       
       {/* Main content */}
-      <main className="container mx-auto px-4 py-8 flex-1">
+      <main className="container mx-auto px-4 py-12 flex-1">
         <div className="mb-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Your Files</h1>
+          <h1 className="text-3xl font-bold text-brand-purple-dark">Your Files (This Session)</h1>
           <div className="flex gap-3">
-            <Button asChild variant="outline">
-              <Link to="/nearby" className="flex items-center gap-2">
-                <Share2 className="h-4 w-4" /> Nearby Share
-              </Link>
-            </Button>
-            <Button onClick={() => document.getElementById("file-upload-button")?.click()}>
+            <Button onClick={() => document.getElementById("file-upload-button")?.click()} className="shadow-lg bg-brand-purple text-white hover:bg-brand-purple-dark">
               <Plus className="mr-2 h-4 w-4" /> Upload New File
             </Button>
           </div>
         </div>
         
-        <div className="grid gap-8 md:grid-cols-[1fr_300px]">
+        <div className="grid gap-8 md:grid-cols-[1fr_350px]">
           {/* File list */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <FileList files={files} isLoading={isLoading} />
+          <div className={`${glassCard} p-8`}>
+            <FileList files={files} isLoading={false} />
           </div>
           
           {/* Upload widget */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Upload a File</h2>
+          <div className={`${glassCard} p-8`}>
+            <h2 className="text-xl font-semibold mb-4 text-brand-purple-dark">Upload a File</h2>
             <FileUploader onFileUpload={handleFileUpload} />
           </div>
         </div>
       </main>
       
       {/* Footer */}
-      <footer className="bg-white py-6 border-t">
+      <footer className="bg-white py-6 border-t rounded-t-2xl glassCard">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <p>© 2025 ShareAnyWhere. All rights reserved.</p>
         </div>

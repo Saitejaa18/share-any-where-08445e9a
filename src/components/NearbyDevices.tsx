@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,13 +19,11 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [isBluetoothAvailable, setIsBluetoothAvailable] = useState(false);
 
-  // New state for QR scanning and user input
   const [showQRDialog, setShowQRDialog] = useState(false);
-  const [deviceFilter, setDeviceFilter] = useState("");      // for both QR or text input
+  const [deviceFilter, setDeviceFilter] = useState("");
   const [highlightedDeviceId, setHighlightedDeviceId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if Bluetooth is available in this browser
     if (navigator.bluetooth) {
       setIsBluetoothAvailable(true);
     } else {
@@ -36,7 +33,6 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
   }, []);
 
   useEffect(() => {
-    // When deviceFilter changes, see if we have a matching device
     if (deviceFilter) {
       const found = devices.find(
         (dev) =>
@@ -80,7 +76,6 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
 
       if (device) {
         setDevices(prev => {
-          // Only add device if it's not already in the list
           if (!prev.some(d => d.id === device.id)) {
             return [...prev, device];
           }
@@ -125,11 +120,56 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
     }
   };
 
+  const findDeviceByCode = (code: string) => {
+    return devices.find(
+      (dev) =>
+        dev.name?.toLowerCase() === code.toLowerCase() ||
+        dev.id?.toLowerCase() === code.toLowerCase()
+    );
+  };
+
+  const handleQRScanResult = async (val: string) => {
+    setDeviceFilter(val);
+    setShowQRDialog(false);
+
+    const matchingDevice = findDeviceByCode(val);
+    if (matchingDevice) {
+      toast({
+        title: "Device matched",
+        description: `Found device: ${matchingDevice.name || matchingDevice.id.substring(0, 6)}. Connecting...`,
+      });
+      try {
+        const server = await matchingDevice.gatt?.connect();
+        if (server) {
+          toast({
+            title: "Connected",
+            description: `Connected to ${matchingDevice.name || "device"}`,
+          });
+          if (onDeviceSelected) {
+            onDeviceSelected(matchingDevice);
+          }
+        }
+      } catch (error) {
+        console.error("Error connecting via QR:", error);
+        toast({
+          title: "Connection failed",
+          description: "Failed to connect to device",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Device not found",
+        description: "No matching device found. Make sure the device has been scanned or try scanning again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          {/* Bluetooth state icon */}
           <span className={isBluetoothAvailable ? "text-brand-purple" : "text-gray-400"}>
             {isBluetoothAvailable ? (
               <span>&#9679;</span>
@@ -143,7 +183,6 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
           <Button size="sm" onClick={scanForDevices} disabled={!isBluetoothAvailable || isScanning}>
             {isScanning ? "Scanning..." : "Scan for Devices"}
           </Button>
-          {/* QR Scanner trigger */}
           <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
             <DialogTrigger asChild>
               <Button size="icon" variant="outline" className="flex items-center" title="Scan QR for device">
@@ -154,11 +193,11 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
               <DialogHeader>
                 <DialogTitle>Scan Device QR Code</DialogTitle>
                 <DialogDescription>
-                  Point your camera at the device's QR code. If successful, we'll focus that device in the list.
+                  Point your camera at the device's QR code. If successful, we'll connect you to that device immediately.
                 </DialogDescription>
               </DialogHeader>
               <QRCodeScanner
-                onResult={(val: string) => setDeviceFilter(val)}
+                onResult={handleQRScanResult}
                 onClose={() => setShowQRDialog(false)}
               />
             </DialogContent>

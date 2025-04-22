@@ -20,6 +20,13 @@ import {
   Smartphone,
 } from "lucide-react";
 
+// Define a type for stored device info
+interface StoredDeviceInfo {
+  id: string;
+  name: string;
+  timestamp: number;
+}
+
 interface NearbyDevicesProps {
   onDeviceSelected?: (device: BluetoothDevice) => void;
 }
@@ -34,26 +41,32 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
   const [highlightedDeviceId, setHighlightedDeviceId] = useState<string | null>(null);
   const [deviceIdentifier, setDeviceIdentifier] = useState("");
 
+  // Load stored devices on mount
   useEffect(() => {
-    const storedId = localStorage.getItem("device-identifier");
-    if (storedId) {
-      setDeviceIdentifier(storedId);
-    } else {
-      const newId = `${navigator.userAgent.substring(0, 8)}-${Math.random().toString(36).substring(2, 8)}`;
-      localStorage.setItem("device-identifier", newId);
-      setDeviceIdentifier(newId);
+    try {
+      // Load stored device identifier
+      const storedId = localStorage.getItem("device-identifier");
+      if (storedId) {
+        setDeviceIdentifier(storedId);
+      } else {
+        const newId = `${navigator.userAgent.substring(0, 8)}-${Math.random().toString(36).substring(2, 8)}`;
+        localStorage.setItem("device-identifier", newId);
+        setDeviceIdentifier(newId);
+      }
+
+      // Check Bluetooth availability
+      if (navigator.bluetooth) {
+        setIsBluetoothAvailable(true);
+      } else {
+        setIsBluetoothAvailable(false);
+        console.log("Bluetooth API is not available in this browser");
+      }
+    } catch (error) {
+      console.error("Error initializing NearbyDevices:", error);
     }
   }, []);
 
-  useEffect(() => {
-    if (navigator.bluetooth) {
-      setIsBluetoothAvailable(true);
-    } else {
-      setIsBluetoothAvailable(false);
-      console.log("Bluetooth API is not available");
-    }
-  }, []);
-
+  // Filter devices when search term changes
   useEffect(() => {
     if (deviceFilter) {
       const found = devices.find(
@@ -61,6 +74,7 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
           dev.name?.toLowerCase().includes(deviceFilter.toLowerCase()) ||
           dev.id?.toLowerCase().includes(deviceFilter.toLowerCase())
       );
+      
       if (found) {
         setHighlightedDeviceId(found.id);
         toast({
@@ -68,6 +82,38 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
           description: `Found device: ${found.name || found.id.substring(0,6)}`,
         });
       } else {
+        // Try to match against stored devices
+        try {
+          const deviceMap = JSON.parse(localStorage.getItem("discovered-devices") || "{}");
+          const storedDeviceKeys = Object.keys(deviceMap);
+          let matchFound = false;
+          
+          for (const key of storedDeviceKeys) {
+            const storedDevice = deviceMap[key];
+            if (
+              storedDevice.id.toLowerCase().includes(deviceFilter.toLowerCase()) ||
+              (storedDevice.name && storedDevice.name.toLowerCase().includes(deviceFilter.toLowerCase()))
+            ) {
+              toast({
+                title: "Stored device matched",
+                description: `Found device in history: ${storedDevice.name}. Please scan for devices to reconnect.`,
+              });
+              matchFound = true;
+              break;
+            }
+          }
+          
+          if (!matchFound) {
+            toast({
+              title: "No matching device",
+              description: "No devices match your search. Try scanning for devices first.",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error("Error matching against stored devices:", error);
+        }
+        
         setHighlightedDeviceId(null);
       }
     } else {
@@ -119,11 +165,22 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
       }
     } catch (error) {
       console.error("Error scanning for Bluetooth devices:", error);
-      toast({
-        title: "Scan failed",
-        description: "Failed to scan for devices. Please try again.",
-        variant: "destructive",
-      });
+      
+      // More user-friendly error message handling
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorMessage.includes("cancelled")) {
+        toast({
+          title: "Scan cancelled",
+          description: "You cancelled the device selection.",
+        });
+      } else {
+        toast({
+          title: "Scan failed",
+          description: "Failed to scan for devices. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsScanning(false);
     }
@@ -131,6 +188,11 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
 
   const connectToDevice = async (device: BluetoothDevice) => {
     try {
+      toast({
+        title: "Connecting",
+        description: `Trying to connect to ${device.name || "device"}...`,
+      });
+      
       const server = await device.gatt?.connect();
       if (server) {
         toast({
@@ -145,47 +207,30 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
       console.error("Error connecting to device:", error);
       toast({
         title: "Connection failed",
-        description: "Failed to connect to device",
+        description: "Failed to connect to device. Make sure it's nearby and discoverable.",
         variant: "destructive",
       });
     }
   };
 
-  const findDeviceByCode = (code: string) => {
-    // First check currently scanned devices
+  const findDeviceByCode = (code: string): BluetoothDevice | null => {
+    // Check currently scanned devices first
     const device = devices.find(
       (dev) =>
         dev.name?.toLowerCase().includes(code.toLowerCase()) ||
-        dev.id?.toLowerCase().includes(code.toLowerCase())
+        dev.id?.toLowerCase().includes(code.toLowerCase()) ||
+        code.includes(dev.id.substring(0, 6))  // Match partial device ID
     );
     
     if (device) return device;
     
-    // If not found in current devices, check stored devices
-    try {
-      const deviceMap = JSON.parse(localStorage.getItem("discovered-devices") || "{}");
-      const storedDeviceKeys = Object.keys(deviceMap);
-      
-      // Find a match in stored devices
-      for (const key of storedDeviceKeys) {
-        const storedDevice = deviceMap[key];
-        if (
-          storedDevice.id.toLowerCase().includes(code.toLowerCase()) ||
-          (storedDevice.name && storedDevice.name.toLowerCase().includes(code.toLowerCase()))
-        ) {
-          // We found a match in storage but don't have the actual device object
-          // This means we need to prompt the user to scan again
-          return null;
-        }
-      }
-    } catch (error) {
-      console.error("Error reading stored devices:", error);
-    }
-    
+    // If no match in current devices, return null
+    // (We already checked stored devices in the useEffect)
     return null;
   };
 
   const handleQRScanResult = async (val: string) => {
+    console.log("QR scan result:", val);
     setDeviceFilter(val);
     setShowQRDialog(false);
 
@@ -210,7 +255,7 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
         console.error("Error connecting via QR:", error);
         toast({
           title: "Connection failed",
-          description: "Failed to connect to device",
+          description: "Failed to connect to device. Make sure it's nearby and Bluetooth is enabled.",
           variant: "destructive",
         });
       }
@@ -230,7 +275,12 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
           <DeviceConnectionStatus isBluetoothAvailable={isBluetoothAvailable} />
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={scanForDevices} disabled={!isBluetoothAvailable || isScanning}>
+          <Button 
+            size="sm" 
+            onClick={scanForDevices} 
+            disabled={!isBluetoothAvailable || isScanning}
+            className="bg-brand-purple hover:bg-brand-purple-dark"
+          >
             {isScanning ? "Scanning..." : "Scan for Devices"}
           </Button>
           <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
@@ -295,7 +345,9 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
 
       {!isBluetoothAvailable && (
         <div className="text-sm text-muted-foreground bg-red-50 p-3 rounded-md">
-          Bluetooth is not available in your browser. Try using Chrome or Edge on desktop for this feature.
+          <p className="font-semibold">Bluetooth is not available in your browser</p> 
+          <p>Try using Chrome or Edge on desktop, or check if your device supports Web Bluetooth.</p>
+          <p className="mt-2 text-xs">Note: Web Bluetooth is still an experimental technology and may not work on all devices.</p>
         </div>
       )}
 

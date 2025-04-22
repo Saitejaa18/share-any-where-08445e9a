@@ -15,10 +15,11 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
   const [isScanning, setIsScanning] = useState(true);
   const [scanningSupported, setScanningSupported] = useState(true);
   const [hasPermission, setHasPermission] = useState(true);
+  const [scannerActive, setScannerActive] = useState(true);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
-    let scanInterval: number | null = null;
+    let scanActive = true;
 
     async function setupCamera() {
       if ("BarcodeDetector" in window) {
@@ -39,6 +40,8 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
             const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
 
             const scan = async () => {
+              if (!scannerActive || !scanActive) return;
+              
               if (videoRef.current && !videoRef.current.paused && !videoRef.current.ended) {
                 try {
                   const barcodes = await detector.detect(videoRef.current);
@@ -46,6 +49,9 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
                     const qrValue = barcodes[0].rawValue || barcodes[0].value || "";
                     if (qrValue) {
                       console.log("QR code detected:", qrValue);
+                      // Prevent multiple scans of the same code
+                      scanActive = false;
+                      setScannerActive(false);
                       onResult(qrValue);
                       return;
                     }
@@ -53,7 +59,9 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
                 } catch (err) {
                   // ignore each frame errors, barcode not detected
                 }
-                requestAnimationFrame(scan);
+                if (scanActive) {
+                  requestAnimationFrame(scan);
+                }
               }
             };
             
@@ -81,19 +89,17 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
       }
     }
 
-    if (isScanning) {
+    if (isScanning && scannerActive) {
       setupCamera();
     }
 
     return () => {
+      scanActive = false;
       if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
-      if (scanInterval !== null) {
-        clearInterval(scanInterval);
+        stream.getTracks().forEach(t => t.stop());
       }
     };
-  }, [onResult, onClose, isScanning]);
+  }, [onResult, isScanning, scannerActive]);
 
   const handleManualCodeSubmit = () => {
     if (manualCode.trim()) {
@@ -109,7 +115,7 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {isScanning && scanningSupported && hasPermission ? (
+      {isScanning && scanningSupported && hasPermission && scannerActive ? (
         <>
           <video ref={videoRef} className="w-full h-48 bg-black rounded border mb-1" />
           <p className="text-sm text-muted-foreground">Point your camera at a device QR code</p>
@@ -140,7 +146,10 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
         {scanningSupported && hasPermission && (
           <Button 
             variant="outline" 
-            onClick={() => setIsScanning(!isScanning)}
+            onClick={() => {
+              setIsScanning(!isScanning);
+              setScannerActive(isScanning ? false : true);
+            }}
           >
             {isScanning ? "Enter Code Manually" : "Try Camera Scan"}
           </Button>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
@@ -10,7 +9,8 @@ import {
   Share,
   BluetoothConnected,
   BluetoothOff,
-  WifiHigh
+  WifiHigh,
+  QrCode
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
@@ -26,6 +26,15 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { QRCodeScanner } from "@/components/QRCodeScanner";
 
 const pastelGradient = "bg-gradient-to-br from-[#e5defc] to-[#fbc2eb]";
 const glassCard = "backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl shadow-xl";
@@ -37,9 +46,10 @@ const Dashboard = () => {
   const [nearbyDevices, setNearbyDevices] = useState<BluetoothDevice[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileUploadResult | null>(null);
   const { user, signOut } = useAuth();
+  const [showQRDialog, setShowQRDialog] = useState(false);
+  const [deviceFilter, setDeviceFilter] = useState("");
 
   useEffect(() => {
-    // Check if Bluetooth API is available
     if (navigator.bluetooth) {
       setIsBluetoothAvailable(true);
     } else {
@@ -77,7 +87,6 @@ const Dashboard = () => {
       });
 
       if (device) {
-        // When a device is found, add it to our list
         setNearbyDevices(prev => {
           if (!prev.some(d => d.id === device.id)) {
             return [...prev, device];
@@ -92,7 +101,6 @@ const Dashboard = () => {
           description: `Connected to ${device.name || "Unnamed Device"}`,
         });
 
-        // Listen for disconnection
         device.addEventListener('gattserverdisconnected', () => {
           setIsBluetoothConnected(false);
           toast({
@@ -111,9 +119,49 @@ const Dashboard = () => {
     }
   };
 
+  const handleQRScanResult = async (code: string) => {
+    setShowQRDialog(false);
+    setDeviceFilter(code);
+    
+    const matchingDevice = nearbyDevices.find(
+      (dev) =>
+        dev.name?.toLowerCase() === code.toLowerCase() ||
+        dev.id?.toLowerCase() === code.toLowerCase()
+    );
+    
+    if (matchingDevice) {
+      toast({
+        title: "Device matched",
+        description: `Found device: ${matchingDevice.name || matchingDevice.id.substring(0, 6)}. Connecting...`,
+      });
+      
+      try {
+        const server = await matchingDevice.gatt?.connect();
+        if (server) {
+          toast({
+            title: "Connected",
+            description: `Connected to ${matchingDevice.name || "device"}`,
+          });
+          setIsBluetoothConnected(true);
+        }
+      } catch (error) {
+        console.error("Error connecting via QR:", error);
+        toast({
+          title: "Connection failed",
+          description: "Failed to connect to device",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Device not found",
+        description: "No matching device found. Try scanning for devices first.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const shareFileWithDevice = async (file: FileUploadResult, deviceId: string) => {
-    // In a real implementation, this would handle the actual file transfer
-    // For this demo, we'll just show a success message
     setSelectedFile(file);
     
     toast({
@@ -124,7 +172,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%)" }}>
-      {/* Header */}
       <header className="bg-gradient-to-r from-brand-purple to-brand-purple-dark shadow-md py-4 rounded-b-2xl glassCard">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <Logo />
@@ -140,7 +187,6 @@ const Dashboard = () => {
         </div>
       </header>
       
-      {/* Main content */}
       <main className="container mx-auto px-4 py-12 flex-1">
         <div className="mb-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-brand-purple-dark">Your Files (This Session)</h1>
@@ -183,13 +229,41 @@ const Dashboard = () => {
                         </div>
                       )}
                       
-                      <Button 
-                        size="sm" 
-                        onClick={scanForDevices}
-                        disabled={!isBluetoothAvailable}
-                      >
-                        Scan for Devices
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          onClick={scanForDevices}
+                          disabled={!isBluetoothAvailable}
+                        >
+                          Scan for Devices
+                        </Button>
+                        
+                        <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="icon" 
+                              variant="outline" 
+                              className="flex items-center" 
+                              title="Scan QR for device"
+                              disabled={!isBluetoothAvailable}
+                            >
+                              <QrCode size={18} />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Scan Device QR Code</DialogTitle>
+                              <DialogDescription>
+                                Point your camera at the device's QR code. If successful, we'll connect you to that device immediately.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <QRCodeScanner
+                              onResult={handleQRScanResult}
+                              onClose={() => setShowQRDialog(false)}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
                     
                     {nearbyDevices.length > 0 ? (
@@ -250,12 +324,10 @@ const Dashboard = () => {
         </div>
         
         <div className="grid gap-8 md:grid-cols-[1fr_350px]">
-          {/* File list */}
           <div className={`${glassCard} p-8`}>
             <FileList files={files} isLoading={false} />
           </div>
           
-          {/* Upload widget */}
           <div className={`${glassCard} p-8`}>
             <h2 className="text-xl font-semibold mb-4 text-brand-purple-dark">Upload a File</h2>
             <FileUploader onFileUpload={handleFileUpload} />
@@ -263,7 +335,6 @@ const Dashboard = () => {
         </div>
       </main>
       
-      {/* Footer */}
       <footer className="bg-white py-6 border-t rounded-t-2xl glassCard">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
           <p>© 2025 ShareAnyWhere. All rights reserved.</p>

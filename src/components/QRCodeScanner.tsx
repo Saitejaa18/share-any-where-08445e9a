@@ -1,8 +1,9 @@
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-// We'll use the new BarcodeDetector API if available, fallback: user uploads photo
 export interface QRCodeScannerProps {
   onResult: (text: string) => void;
   onClose: () => void;
@@ -10,6 +11,9 @@ export interface QRCodeScannerProps {
 
 export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [manualCode, setManualCode] = useState("");
+  const [isScanning, setIsScanning] = useState(true);
+  const [scanningSupported, setScanningSupported] = useState(true);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -42,37 +46,85 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
             scan();
           }
         } catch (err) {
+          setScanningSupported(false);
+          setIsScanning(false);
           toast({
             title: "Cannot access camera",
             description: "Camera access was denied or not available.",
             variant: "destructive",
           });
-          onClose();
         }
       } else {
+        setScanningSupported(false);
+        setIsScanning(false);
         toast({
           title: "QR scanning not supported",
           description: "Please use Chrome/Edge for built-in QR scanning, or type the device code.",
           variant: "destructive",
         });
-        onClose();
       }
     }
 
-    setupCamera();
+    if (isScanning) {
+      setupCamera();
+    }
 
     return () => {
       if (stream) {
         stream.getTracks().forEach((t) => t.stop());
       }
     };
-  }, [onResult, onClose]);
+  }, [onResult, onClose, isScanning]);
+
+  const handleManualCodeSubmit = () => {
+    if (manualCode.trim()) {
+      onResult(manualCode.trim());
+    } else {
+      toast({
+        title: "Empty code",
+        description: "Please enter a device code",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center">
-      <video ref={videoRef} className="w-full h-48 bg-black rounded border mb-4" />
-      <p className="text-sm text-muted-foreground">Point your camera at a device QR code</p>
-      <button onClick={onClose} className="mt-4 px-4 py-2 bg-brand-purple text-white rounded">Cancel</button>
+    <div className="flex flex-col items-center gap-4">
+      {isScanning && scanningSupported ? (
+        <>
+          <video ref={videoRef} className="w-full h-48 bg-black rounded border mb-1" />
+          <p className="text-sm text-muted-foreground">Point your camera at a device QR code</p>
+        </>
+      ) : (
+        <div className="p-4 rounded-md bg-muted w-full">
+          <p className="text-sm mb-4 text-center">
+            {!scanningSupported 
+              ? "QR scanning is not supported in this browser. Please enter the device code manually."
+              : "Camera access denied. Please enter the device code manually."}
+          </p>
+          <div className="flex flex-col gap-2">
+            <Input 
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              placeholder="Enter device code"
+              className="w-full"
+            />
+            <Button onClick={handleManualCodeSubmit}>Submit Code</Button>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex justify-between w-full">
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        {scanningSupported && (
+          <Button 
+            variant="outline" 
+            onClick={() => setIsScanning(!isScanning)}
+          >
+            {isScanning ? "Enter Code Manually" : "Try Camera Scan"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,14 +1,22 @@
 
+import { BluetoothConnected, BluetoothOff } from "lucide-react";
+
 interface DeviceConnectionStatusProps {
   isBluetoothAvailable: boolean;
 }
 
 export const DeviceConnectionStatus = ({ isBluetoothAvailable }: DeviceConnectionStatusProps) => (
-  <span className={isBluetoothAvailable ? "text-brand-purple" : "text-gray-400"}>
+  <div className={`flex items-center gap-2 ${isBluetoothAvailable ? "text-brand-purple" : "text-gray-400"}`}>
     {isBluetoothAvailable ? (
-      <span>&#9679;</span>
+      <>
+        <BluetoothConnected size={16} />
+        <span className="text-sm">Bluetooth Available</span>
+      </>
     ) : (
-      <span>&#9675;</span>
+      <>
+        <BluetoothOff size={16} />
+        <span className="text-sm">Bluetooth Not Available</span>
+      </>
     )}
-  </span>
+  </div>
 );

@@ -35,6 +35,10 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
+import { QRCode } from "qrcode.react";
+import {
+  Tabs, TabsContent, TabsList, TabsTrigger
+} from "@/components/ui/tabs";
 
 const pastelGradient = "bg-gradient-to-br from-[#e5defc] to-[#fbc2eb]";
 const glassCard = "backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl shadow-xl";
@@ -48,6 +52,18 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [deviceFilter, setDeviceFilter] = useState("");
+  const [deviceIdentifier, setDeviceIdentifier] = useState("");
+
+  useEffect(() => {
+    const storedId = localStorage.getItem("device-identifier");
+    if (storedId) {
+      setDeviceIdentifier(storedId);
+    } else {
+      const newId = `${navigator.userAgent.substring(0, 8)}-${Math.random().toString(36).substring(2, 8)}`;
+      localStorage.setItem("device-identifier", newId);
+      setDeviceIdentifier(newId);
+    }
+  }, []);
 
   useEffect(() => {
     if (navigator.bluetooth) {
@@ -244,7 +260,7 @@ const Dashboard = () => {
                               size="icon" 
                               variant="outline" 
                               className="flex items-center" 
-                              title="Scan QR for device"
+                              title="QR Code Options"
                               disabled={!isBluetoothAvailable}
                             >
                               <QrCode size={18} />
@@ -252,15 +268,43 @@ const Dashboard = () => {
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Scan Device QR Code</DialogTitle>
+                              <DialogTitle>QR Code Options</DialogTitle>
                               <DialogDescription>
-                                Point your camera at the device's QR code. If successful, we'll connect you to that device immediately.
+                                You can scan a QR code from another device or show your device's code for others to scan.
                               </DialogDescription>
                             </DialogHeader>
-                            <QRCodeScanner
-                              onResult={handleQRScanResult}
-                              onClose={() => setShowQRDialog(false)}
-                            />
+                            
+                            <Tabs defaultValue="scan" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="scan">Scan QR Code</TabsTrigger>
+                                <TabsTrigger value="show">Show My QR Code</TabsTrigger>
+                              </TabsList>
+                              
+                              <TabsContent value="scan" className="py-4">
+                                {("BarcodeDetector" in window) ? (
+                                  <QRCodeScanner
+                                    onResult={handleQRScanResult}
+                                    onClose={() => setShowQRDialog(false)}
+                                  />
+                                ) : (
+                                  <div className="p-4 text-center bg-red-100 rounded-md text-red-700">
+                                    <p className="font-semibold">QR scanning not supported</p>
+                                    <p className="text-sm mt-2">Please use Chrome/Edge for built-in QR scanning, or type the device code.</p>
+                                  </div>
+                                )}
+                              </TabsContent>
+                              
+                              <TabsContent value="show" className="flex flex-col items-center gap-4 py-4">
+                                <div className="bg-white p-4 rounded-lg">
+                                  <QRCode value={deviceIdentifier} size={200} />
+                                </div>
+                                <div className="text-center">
+                                  <p className="font-medium">Your Device Code</p>
+                                  <p className="text-xs text-muted-foreground break-all">{deviceIdentifier}</p>
+                                  <p className="text-sm mt-2">Scan this code with another device to connect</p>
+                                </div>
+                              </TabsContent>
+                            </Tabs>
                           </DialogContent>
                         </Dialog>
                       </div>

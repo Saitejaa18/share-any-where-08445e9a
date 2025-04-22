@@ -7,12 +7,17 @@ import { toast } from "@/hooks/use-toast";
 import { QRCodeScanner } from "./QRCodeScanner";
 import { DeviceList } from "./DeviceList";
 import { DeviceConnectionStatus } from "./DeviceConnectionStatus";
+import { QRCode } from "qrcode.react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger
 } from "@/components/ui/dialog";
 import {
+  Tabs, TabsContent, TabsList, TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Search,
   QrCode,
+  Smartphone,
 } from "lucide-react";
 
 interface NearbyDevicesProps {
@@ -27,6 +32,20 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [deviceFilter, setDeviceFilter] = useState("");
   const [highlightedDeviceId, setHighlightedDeviceId] = useState<string | null>(null);
+  const [deviceIdentifier, setDeviceIdentifier] = useState("");
+
+  // Generate a persistent device identifier for this device/browser
+  useEffect(() => {
+    const storedId = localStorage.getItem("device-identifier");
+    if (storedId) {
+      setDeviceIdentifier(storedId);
+    } else {
+      // Create a simple identifier combining browser info and random string
+      const newId = `${navigator.userAgent.substring(0, 8)}-${Math.random().toString(36).substring(2, 8)}`;
+      localStorage.setItem("device-identifier", newId);
+      setDeviceIdentifier(newId);
+    }
+  }, []);
 
   useEffect(() => {
     if (navigator.bluetooth) {
@@ -176,7 +195,6 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <DeviceConnectionStatus isBluetoothAvailable={isBluetoothAvailable} />
-          <h3 className="text-md font-medium">Nearby Devices</h3>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={scanForDevices} disabled={!isBluetoothAvailable || isScanning}>
@@ -184,21 +202,49 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
           </Button>
           <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
             <DialogTrigger asChild>
-              <Button size="icon" variant="outline" className="flex items-center" title="Scan QR for device">
-                <QrCode />
+              <Button size="icon" variant="outline" className="flex items-center" title="QR Code Options">
+                <QrCode size={16} />
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Scan Device QR Code</DialogTitle>
+                <DialogTitle>QR Code Options</DialogTitle>
                 <DialogDescription>
-                  Point your camera at the device's QR code. If successful, we'll connect you to that device immediately.
+                  You can scan a QR code from another device or show your device's code for others to scan.
                 </DialogDescription>
               </DialogHeader>
-              <QRCodeScanner
-                onResult={handleQRScanResult}
-                onClose={() => setShowQRDialog(false)}
-              />
+              
+              <Tabs defaultValue="scan" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="scan">Scan QR Code</TabsTrigger>
+                  <TabsTrigger value="show">Show My QR Code</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="scan" className="py-4">
+                  {("BarcodeDetector" in window) ? (
+                    <QRCodeScanner
+                      onResult={handleQRScanResult}
+                      onClose={() => setShowQRDialog(false)}
+                    />
+                  ) : (
+                    <div className="p-4 text-center bg-red-100 rounded-md text-red-700">
+                      <p className="font-semibold">QR scanning not supported</p>
+                      <p className="text-sm mt-2">Please use Chrome/Edge for built-in QR scanning, or type the device code.</p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="show" className="flex flex-col items-center gap-4 py-4">
+                  <div className="bg-white p-4 rounded-lg">
+                    <QRCode value={deviceIdentifier} size={200} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-medium">Your Device Code</p>
+                    <p className="text-xs text-muted-foreground break-all">{deviceIdentifier}</p>
+                    <p className="text-sm mt-2">Scan this code with another device to connect</p>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>

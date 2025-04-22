@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,7 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { QRCodeScanner } from "./QRCodeScanner";
 import { DeviceList } from "./DeviceList";
 import { DeviceConnectionStatus } from "./DeviceConnectionStatus";
-import QRCode from "qrcode.react"; // Fixed: Changed from named import to default import
+import { QRCodeSVG } from "qrcode.react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger
 } from "@/components/ui/dialog";
@@ -34,13 +33,11 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
   const [highlightedDeviceId, setHighlightedDeviceId] = useState<string | null>(null);
   const [deviceIdentifier, setDeviceIdentifier] = useState("");
 
-  // Generate a persistent device identifier for this device/browser
   useEffect(() => {
     const storedId = localStorage.getItem("device-identifier");
     if (storedId) {
       setDeviceIdentifier(storedId);
     } else {
-      // Create a simple identifier combining browser info and random string
       const newId = `${navigator.userAgent.substring(0, 8)}-${Math.random().toString(36).substring(2, 8)}`;
       localStorage.setItem("device-identifier", newId);
       setDeviceIdentifier(newId);
@@ -236,7 +233,7 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
                 
                 <TabsContent value="show" className="flex flex-col items-center gap-4 py-4">
                   <div className="bg-white p-4 rounded-lg">
-                    <QRCode value={deviceIdentifier} size={200} />
+                    <QRCodeSVG value={deviceIdentifier} size={200} />
                   </div>
                   <div className="text-center">
                     <p className="font-medium">Your Device Code</p>

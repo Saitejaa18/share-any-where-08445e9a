@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
@@ -36,7 +35,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
-import QRCode from "qrcode.react"; // Fixed: Changed from named import to default import
+import { QRCodeSVG } from "qrcode.react";
 import {
   Tabs, TabsContent, TabsList, TabsTrigger
 } from "@/components/ui/tabs";
@@ -297,7 +296,7 @@ const Dashboard = () => {
                               
                               <TabsContent value="show" className="flex flex-col items-center gap-4 py-4">
                                 <div className="bg-white p-4 rounded-lg">
-                                  <QRCode value={deviceIdentifier} size={200} />
+                                  <QRCodeSVG value={deviceIdentifier} size={200} />
                                 </div>
                                 <div className="text-center">
                                   <p className="font-medium">Your Device Code</p>

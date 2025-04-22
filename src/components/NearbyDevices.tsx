@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { QRCodeScanner } from "./QRCodeScanner";
 import { DeviceList } from "./DeviceList";
 import { DeviceConnectionStatus } from "./DeviceConnectionStatus";
-import { QRCode } from "qrcode.react";
+import QRCode from "qrcode.react"; // Fixed: Changed from named import to default import
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger
 } from "@/components/ui/dialog";

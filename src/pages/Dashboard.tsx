@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
@@ -35,7 +36,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { QRCodeScanner } from "@/components/QRCodeScanner";
-import { QRCode } from "qrcode.react";
+import QRCode from "qrcode.react"; // Fixed: Changed from named import to default import
 import {
   Tabs, TabsContent, TabsList, TabsTrigger
 } from "@/components/ui/tabs";

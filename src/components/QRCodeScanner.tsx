@@ -14,17 +14,27 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
   const [manualCode, setManualCode] = useState("");
   const [isScanning, setIsScanning] = useState(true);
   const [scanningSupported, setScanningSupported] = useState(true);
+  const [hasPermission, setHasPermission] = useState(true);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
+    let scanInterval: number | null = null;
 
     async function setupCamera() {
       if ("BarcodeDetector" in window) {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: "environment",
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            } 
+          });
+          
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            videoRef.current.play();
+            await videoRef.current.play();
+            
             // @ts-ignore
             const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
 
@@ -33,9 +43,12 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
                 try {
                   const barcodes = await detector.detect(videoRef.current);
                   if (barcodes.length > 0) {
-                    onResult(barcodes[0].rawValue || barcodes[0].value || "");
-                    onClose();
-                    return;
+                    const qrValue = barcodes[0].rawValue || barcodes[0].value || "";
+                    if (qrValue) {
+                      console.log("QR code detected:", qrValue);
+                      onResult(qrValue);
+                      return;
+                    }
                   }
                 } catch (err) {
                   // ignore each frame errors, barcode not detected
@@ -43,9 +56,12 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
                 requestAnimationFrame(scan);
               }
             };
+            
             scan();
           }
         } catch (err) {
+          console.error("Camera access error:", err);
+          setHasPermission(false);
           setScanningSupported(false);
           setIsScanning(false);
           toast({
@@ -73,6 +89,9 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
       if (stream) {
         stream.getTracks().forEach((t) => t.stop());
       }
+      if (scanInterval !== null) {
+        clearInterval(scanInterval);
+      }
     };
   }, [onResult, onClose, isScanning]);
 
@@ -90,7 +109,7 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {isScanning && scanningSupported ? (
+      {isScanning && scanningSupported && hasPermission ? (
         <>
           <video ref={videoRef} className="w-full h-48 bg-black rounded border mb-1" />
           <p className="text-sm text-muted-foreground">Point your camera at a device QR code</p>
@@ -100,7 +119,9 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
           <p className="text-sm mb-4 text-center">
             {!scanningSupported 
               ? "QR scanning is not supported in this browser. Please enter the device code manually."
-              : "Camera access denied. Please enter the device code manually."}
+              : !hasPermission
+                ? "Camera access denied. Please enter the device code manually."
+                : "QR scanning disabled. Enter the device code manually."}
           </p>
           <div className="flex flex-col gap-2">
             <Input 
@@ -116,7 +137,7 @@ export const QRCodeScanner = ({ onResult, onClose }: QRCodeScannerProps) => {
       
       <div className="flex justify-between w-full">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        {scanningSupported && (
+        {scanningSupported && hasPermission && (
           <Button 
             variant="outline" 
             onClick={() => setIsScanning(!isScanning)}

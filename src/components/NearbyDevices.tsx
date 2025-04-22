@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -57,8 +58,8 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
     if (deviceFilter) {
       const found = devices.find(
         (dev) =>
-          dev.name?.toLowerCase() === deviceFilter.toLowerCase() ||
-          dev.id?.toLowerCase() === deviceFilter.toLowerCase()
+          dev.name?.toLowerCase().includes(deviceFilter.toLowerCase()) ||
+          dev.id?.toLowerCase().includes(deviceFilter.toLowerCase())
       );
       if (found) {
         setHighlightedDeviceId(found.id);
@@ -96,6 +97,15 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
       });
 
       if (device) {
+        // Store device identifier in local storage
+        const deviceMap = JSON.parse(localStorage.getItem("discovered-devices") || "{}");
+        deviceMap[device.id] = {
+          id: device.id,
+          name: device.name || `Device-${device.id.substring(0, 6)}`,
+          timestamp: Date.now()
+        };
+        localStorage.setItem("discovered-devices", JSON.stringify(deviceMap));
+
         setDevices(prev => {
           if (!prev.some(d => d.id === device.id)) {
             return [...prev, device];
@@ -142,11 +152,37 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
   };
 
   const findDeviceByCode = (code: string) => {
-    return devices.find(
+    // First check currently scanned devices
+    const device = devices.find(
       (dev) =>
-        dev.name?.toLowerCase() === code.toLowerCase() ||
-        dev.id?.toLowerCase() === code.toLowerCase()
+        dev.name?.toLowerCase().includes(code.toLowerCase()) ||
+        dev.id?.toLowerCase().includes(code.toLowerCase())
     );
+    
+    if (device) return device;
+    
+    // If not found in current devices, check stored devices
+    try {
+      const deviceMap = JSON.parse(localStorage.getItem("discovered-devices") || "{}");
+      const storedDeviceKeys = Object.keys(deviceMap);
+      
+      // Find a match in stored devices
+      for (const key of storedDeviceKeys) {
+        const storedDevice = deviceMap[key];
+        if (
+          storedDevice.id.toLowerCase().includes(code.toLowerCase()) ||
+          (storedDevice.name && storedDevice.name.toLowerCase().includes(code.toLowerCase()))
+        ) {
+          // We found a match in storage but don't have the actual device object
+          // This means we need to prompt the user to scan again
+          return null;
+        }
+      }
+    } catch (error) {
+      console.error("Error reading stored devices:", error);
+    }
+    
+    return null;
   };
 
   const handleQRScanResult = async (val: string) => {
@@ -181,7 +217,7 @@ export const NearbyDevices = ({ onDeviceSelected }: NearbyDevicesProps) => {
     } else {
       toast({
         title: "Device not found",
-        description: "No matching device found. Make sure the device has been scanned or try scanning again.",
+        description: "No matching device found. Please scan for devices first by clicking 'Scan for Devices'.",
         variant: "destructive",
       });
     }

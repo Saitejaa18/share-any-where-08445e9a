@@ -151,26 +151,24 @@ const Index = () => {
               <div>
                 <h4 className="font-semibold mb-3">Product</h4>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Features</a></li>
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Pricing</a></li>
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">FAQ</a></li>
+                  <li><Link to="/faq" className="text-sm text-muted-foreground hover:text-primary">FAQ</Link></li>
+                  <li><Link to="/blog" className="text-sm text-muted-foreground hover:text-primary">Blog</Link></li>
                 </ul>
               </div>
               
               <div>
                 <h4 className="font-semibold mb-3">Company</h4>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">About</a></li>
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Blog</a></li>
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Contact</a></li>
+                  <li><Link to="/about" className="text-sm text-muted-foreground hover:text-primary">About</Link></li>
+                  <li><Link to="/contact" className="text-sm text-muted-foreground hover:text-primary">Contact</Link></li>
                 </ul>
               </div>
               
               <div>
                 <h4 className="font-semibold mb-3">Legal</h4>
                 <ul className="space-y-2">
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Privacy</a></li>
-                  <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">Terms</a></li>
+                  <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-primary">Privacy</Link></li>
+                  <li><Link to="/terms" className="text-sm text-muted-foreground hover:text-primary">Terms</Link></li>
                 </ul>
               </div>
             </div>

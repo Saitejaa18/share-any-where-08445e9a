@@ -12,6 +12,12 @@ import Download from "./pages/Download";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Privacy from "./pages/Privacy";
+import FAQ from "./pages/FAQ";
+import Blog from "./pages/Blog";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +32,12 @@ const AppRoutes = () => (
       </ProtectedRoute>
     } />
     <Route path="/download/:fileId" element={<Download />} />
+    <Route path="/privacy" element={<Privacy />} />
+    <Route path="/faq" element={<FAQ />} />
+    <Route path="/blog" element={<Blog />} />
+    <Route path="/contact" element={<Contact />} />
+    <Route path="/about" element={<About />} />
+    <Route path="/terms" element={<Terms />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
     <Route path="*" element={<NotFound />} />
   </Routes>

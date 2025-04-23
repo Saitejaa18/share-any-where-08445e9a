@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, File, FileText, Image, Music, Video } from "lucide-react";
+import { Copy, Download, File, FileText, Image, Music, Video, Share2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +10,10 @@ import { FileUploadResult } from "@/services/fileService";
 interface FileListProps {
   files: FileUploadResult[];
   isLoading?: boolean;
+  onNearbyShare?: (file: FileUploadResult) => void;
 }
 
-export const FileList = ({ files, isLoading = false }: FileListProps) => {
+export const FileList = ({ files, isLoading = false, onNearbyShare }: FileListProps) => {
   const copyToClipboard = (link: string) => {
     navigator.clipboard.writeText(link);
     toast({
@@ -90,11 +91,23 @@ export const FileList = ({ files, isLoading = false }: FileListProps) => {
                 </div>
               </div>
               <div className="ml-4 flex items-center space-x-2">
+                {onNearbyShare && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onNearbyShare(file)}
+                    className="h-8 w-8"
+                    title="Share with nearby device"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => copyToClipboard(file.shareableLink)}
                   className="h-8 w-8"
+                  title="Copy link"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -103,6 +116,7 @@ export const FileList = ({ files, isLoading = false }: FileListProps) => {
                   size="icon"
                   className="h-8 w-8"
                   asChild
+                  title="Download"
                 >
                   <a href={file.url} target="_blank" rel="noopener noreferrer">
                     <Download className="h-4 w-4" />

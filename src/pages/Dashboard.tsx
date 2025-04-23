@@ -3,12 +3,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
 import { FileList } from "@/components/FileList";
-import { LogOut, Plus, User } from "lucide-react";
+import { LogOut, Plus, User, Share2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { FileUploadResult } from "@/services/fileService";
 import { toast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { NearbyDevices } from "@/components/NearbyDevices";
 
 const pastelGradient = "bg-gradient-to-br from-[#e5defc] to-[#fbc2eb]";
 const glassCard = "backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl shadow-xl";
@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [files, setFiles] = useState<FileUploadResult[]>([]);
   const { user, signOut } = useAuth();
   const [selectedFile, setSelectedFile] = useState<FileUploadResult | null>(null);
+  const [showNearbyDevices, setShowNearbyDevices] = useState(false);
 
   const handleFileUpload = (fileData: FileUploadResult) => {
     setFiles(prevFiles => [fileData, ...prevFiles]);
@@ -24,6 +25,11 @@ const Dashboard = () => {
       title: "File uploaded successfully",
       description: "Your file is now available for sharing",
     });
+  };
+
+  const handleNearbyShare = (file: FileUploadResult) => {
+    setSelectedFile(file);
+    setShowNearbyDevices(true);
   };
 
   return (
@@ -58,7 +64,11 @@ const Dashboard = () => {
         
         <div className="grid gap-8 md:grid-cols-[1fr_350px]">
           <div className={`${glassCard} p-8`}>
-            <FileList files={files} isLoading={false} />
+            <FileList 
+              files={files} 
+              isLoading={false} 
+              onNearbyShare={handleNearbyShare}
+            />
           </div>
           
           <div className={`${glassCard} p-8`}>
@@ -73,6 +83,13 @@ const Dashboard = () => {
           <p>© 2025 ShareAnyWhere. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Nearby Devices Sheet */}
+      <NearbyDevices 
+        open={showNearbyDevices}
+        onOpenChange={setShowNearbyDevices}
+        selectedFile={selectedFile}
+      />
     </div>
   );
 };

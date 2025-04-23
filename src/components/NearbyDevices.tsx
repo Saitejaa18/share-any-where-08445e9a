@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Wifi, Users, AlertCircle, RefreshCw, Send } from "lucide-react";
+import { Wifi, Users, AlertCircle, RefreshCw, Send, Key } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { FileUploadResult } from "@/services/fileService";
 import {
@@ -29,6 +29,8 @@ interface NearbyDevicesProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedFile: FileUploadResult | null;
+  isReceiveMode?: boolean;
+  onFileReceived?: (file: FileUploadResult | null) => void;
 }
 
 interface Device {
@@ -36,7 +38,13 @@ interface Device {
   deviceName: string;
 }
 
-export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevicesProps) => {
+export const NearbyDevices = ({ 
+  open, 
+  onOpenChange, 
+  selectedFile, 
+  isReceiveMode = false,
+  onFileReceived
+}: NearbyDevicesProps) => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [shareCode, setShareCode] = useState<string>("");
   const [inputCode, setInputCode] = useState<string>("");
@@ -54,9 +62,14 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
         initWebRTC();
         setShareCode(generateShareableCode());
         searchDevices();
+        
+        // If we're in receive mode, default to the code tab
+        if (isReceiveMode) {
+          setActiveTab("code");
+        }
       }
     }
-  }, [open]);
+  }, [open, isReceiveMode]);
 
   // Listen for file transfer completion event
   useEffect(() => {
@@ -65,6 +78,11 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
         title: "File received",
         description: `Successfully received ${e.detail.file.name}`
       });
+      
+      // Pass the received file up to the parent component
+      if (onFileReceived) {
+        onFileReceived(e.detail.file);
+      }
       
       // Close the sheet after successful transfer
       setTransferState("complete");
@@ -77,7 +95,7 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
     return () => {
       window.removeEventListener('file-transfer-complete', handleTransferComplete as EventListener);
     };
-  }, [onOpenChange]);
+  }, [onOpenChange, onFileReceived]);
 
   const searchDevices = async () => {
     if (!isWebRTCSupported()) return;
@@ -121,6 +139,13 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
       } else if (selectedFile) {
         // If file is selected and connection is established, send the file
         sendFile({ deviceId: "code-connection", deviceName: "Connected Device" });
+      } else {
+        // If we're in receive mode, just wait for the file
+        setTransferState("waiting");
+        toast({
+          title: "Connection established",
+          description: "Waiting to receive file..."
+        });
       }
     } catch (error) {
       console.error("Connection error:", error);
@@ -196,13 +221,27 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
     }
   };
 
+  const getSheetTitle = () => {
+    if (isReceiveMode) {
+      return "Receive Files";
+    }
+    return selectedFile ? `Share "${selectedFile.name}"` : "Share with Nearby Devices";
+  };
+
+  const getSheetDescription = () => {
+    if (isReceiveMode) {
+      return "Connect to nearby devices to receive files";
+    }
+    return "Send files directly to devices on your network";
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Share with Nearby Devices</SheetTitle>
+          <SheetTitle>{getSheetTitle()}</SheetTitle>
           <SheetDescription>
-            Send files directly to devices on your network
+            {getSheetDescription()}
           </SheetDescription>
         </SheetHeader>
 
@@ -236,6 +275,21 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
               </Button>
             </div>
           </div>
+        ) : transferState === "waiting" ? (
+          <div className="flex flex-col items-center justify-center h-full space-y-4 py-8">
+            <div className="animate-pulse">
+              <RefreshCw className="h-12 w-12 text-primary animate-spin" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-semibold text-lg">Waiting for file...</h3>
+              <p className="text-muted-foreground">
+                Connection established. The sender will start the transfer.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+          </div>
         ) : transferState === "complete" ? (
           <div className="flex flex-col items-center justify-center h-full space-y-4 py-8">
             <div className="bg-green-100 text-green-700 rounded-full p-2">
@@ -246,7 +300,7 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
             <div className="text-center">
               <h3 className="font-semibold text-lg">Transfer Complete</h3>
               <p className="text-muted-foreground">
-                {selectedFile?.name} was sent successfully
+                {selectedFile?.name || "File"} was {isReceiveMode ? "received" : "sent"} successfully
               </p>
             </div>
           </div>
@@ -259,7 +313,7 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
                   Nearby
                 </TabsTrigger>
                 <TabsTrigger value="code">
-                  <Users className="mr-2 h-4 w-4" />
+                  <Key className="mr-2 h-4 w-4" />
                   Share Code
                 </TabsTrigger>
               </TabsList>
@@ -302,7 +356,7 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
                       <div 
                         key={device.deviceId} 
                         className="flex items-center justify-between p-3 rounded-md border hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => sendFile(device)}
+                        onClick={() => !isReceiveMode && sendFile(device)}
                       >
                         <div className="flex items-center">
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
@@ -310,10 +364,12 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
                           </div>
                           <div>
                             <p className="font-medium text-sm">{device.deviceName}</p>
-                            <p className="text-xs text-muted-foreground">Click to send file</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isReceiveMode ? "Available for connection" : "Click to send file"}
+                            </p>
                           </div>
                         </div>
-                        <Send className="h-4 w-4 text-muted-foreground" />
+                        {!isReceiveMode && <Send className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     ))}
                   </div>
@@ -321,35 +377,39 @@ export const NearbyDevices = ({ open, onOpenChange, selectedFile }: NearbyDevice
               </TabsContent>
               
               <TabsContent value="code" className="space-y-6 mt-4">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Your share code</h3>
-                  <div className="flex items-center space-x-2">
-                    <div className="border rounded-md p-4 bg-muted/10 text-center flex-1">
-                      <p className="text-2xl font-mono tracking-widest">{shareCode}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Share this code with others
-                      </p>
+                {!isReceiveMode && (
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Your share code</h3>
+                    <div className="flex items-center space-x-2">
+                      <div className="border rounded-md p-4 bg-muted/10 text-center flex-1">
+                        <p className="text-2xl font-mono tracking-widest">{shareCode}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Share this code with others
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(shareCode);
+                          toast({
+                            title: "Copied to clipboard",
+                            description: "Share code copied"
+                          });
+                        }}
+                      >
+                        Copy
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        navigator.clipboard.writeText(shareCode);
-                        toast({
-                          title: "Copied to clipboard",
-                          description: "Share code copied"
-                        });
-                      }}
-                    >
-                      Copy
-                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      This is your device: {getDeviceName()}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    This is your device: {getDeviceName()}
-                  </p>
-                </div>
+                )}
                 
-                <div className="border-t pt-4">
-                  <h3 className="text-sm font-medium mb-2">Connect with code</h3>
+                <div className={!isReceiveMode ? "border-t pt-4" : ""}>
+                  <h3 className="text-sm font-medium mb-2">
+                    {isReceiveMode ? "Enter share code to receive files" : "Connect with code"}
+                  </h3>
                   <div className="flex items-center space-x-2">
                     <Input
                       placeholder="Enter 6-digit code"

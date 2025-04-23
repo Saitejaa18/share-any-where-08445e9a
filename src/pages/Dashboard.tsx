@@ -3,12 +3,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileUploader } from "@/components/FileUploader";
 import { FileList } from "@/components/FileList";
-import { LogOut, Plus, User, Share2, Key } from "lucide-react";
+import { LogOut, Plus, User } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { FileUploadResult } from "@/services/fileService";
 import { toast } from "@/hooks/use-toast";
-import { NearbyDevices } from "@/components/NearbyDevices";
+// Removed import: import { NearbyDevices } from "@/components/NearbyDevices";
 
 const pastelGradient = "bg-gradient-to-br from-[#e5defc] to-[#fbc2eb]";
 const glassCard = "backdrop-blur-xl bg-white/80 border border-white/20 rounded-2xl shadow-xl";
@@ -16,9 +16,6 @@ const glassCard = "backdrop-blur-xl bg-white/80 border border-white/20 rounded-2
 const Dashboard = () => {
   const [files, setFiles] = useState<FileUploadResult[]>([]);
   const { user, signOut } = useAuth();
-  const [selectedFile, setSelectedFile] = useState<FileUploadResult | null>(null);
-  const [showNearbyDevices, setShowNearbyDevices] = useState(false);
-  const [isReceiveMode, setIsReceiveMode] = useState(false);
 
   const handleFileUpload = (fileData: FileUploadResult) => {
     setFiles(prevFiles => [fileData, ...prevFiles]);
@@ -26,31 +23,6 @@ const Dashboard = () => {
       title: "File uploaded successfully",
       description: "Your file is now available for sharing",
     });
-  };
-
-  const handleNearbyShare = (file: FileUploadResult) => {
-    setSelectedFile(file);
-    setIsReceiveMode(false);
-    setShowNearbyDevices(true);
-  };
-
-  const handleConnectWithCode = () => {
-    setSelectedFile(null);
-    setIsReceiveMode(true);
-    setShowNearbyDevices(true);
-  };
-
-  const handleNearbyDevicesClosed = (receivedFile: FileUploadResult | null) => {
-    setShowNearbyDevices(false);
-    
-    // If a file was received, add it to the files list
-    if (receivedFile) {
-      setFiles(prevFiles => [receivedFile, ...prevFiles]);
-      toast({
-        title: "File received",
-        description: `Successfully received ${receivedFile.name}`
-      });
-    }
   };
 
   return (
@@ -80,12 +52,6 @@ const Dashboard = () => {
             >
               <Plus className="mr-2 h-4 w-4" /> Upload New File
             </Button>
-            <Button
-              onClick={handleConnectWithCode}
-              className="shadow-lg bg-brand-purple-dark text-white hover:bg-brand-purple"
-            >
-              <Key className="mr-2 h-4 w-4" /> Connect with Code
-            </Button>
           </div>
         </div>
         
@@ -94,7 +60,6 @@ const Dashboard = () => {
             <FileList 
               files={files} 
               isLoading={false} 
-              onNearbyShare={handleNearbyShare}
             />
           </div>
           
@@ -110,24 +75,6 @@ const Dashboard = () => {
           <p>© 2025 ShareAnyWhere. All rights reserved.</p>
         </div>
       </footer>
-
-      {/* Nearby Devices Sheet */}
-      <NearbyDevices 
-        open={showNearbyDevices}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            handleNearbyDevicesClosed(null);
-          }
-          setShowNearbyDevices(isOpen);
-        }}
-        selectedFile={selectedFile}
-        isReceiveMode={isReceiveMode}
-        onFileReceived={(file) => {
-          if (file) {
-            handleNearbyDevicesClosed(file);
-          }
-        }}
-      />
     </div>
   );
 };

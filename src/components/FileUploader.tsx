@@ -22,6 +22,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -48,6 +49,18 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   };
 
   const handleFile = async (file: File) => {
+    // Check file size before attempting to upload
+    if (file.size > MAX_FILE_SIZE) {
+      const errorMessage = `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 100MB`;
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: errorMessage
+      });
+      return;
+    }
+    
     setUploading(true);
     setProgress(0);
     setError(null);
@@ -126,7 +139,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
               <span className="text-primary">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Any file up to 100MB
+              Maximum file size: 100MB
             </p>
           </div>
           <Button
@@ -144,6 +157,23 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
             <p className="text-sm font-medium mb-2">Uploading...</p>
             <Progress value={progress} className="w-full max-w-xs mb-2" />
             <p className="text-xs text-muted-foreground">{progress}%</p>
+          </div>
+        )}
+
+        {error && !uploading && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-6">
+            <div className="flex items-center text-destructive mb-2">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <p className="text-sm font-medium">Upload Error</p>
+            </div>
+            <p className="text-xs text-muted-foreground text-center mb-4">{error}</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => setError(null)}
+            >
+              Try Again
+            </Button>
           </div>
         )}
       </div>

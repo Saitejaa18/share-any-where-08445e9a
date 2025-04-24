@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
@@ -36,11 +35,9 @@ const About = () => {
                   <p className="mb-4">
                     I'm an Engineering student pursuing my 4th-year in Computer Science Engineering with specialization in Internet of Things.
                   </p>
-                  <div className="flex space-x-4">
-                    <Button asChild variant="outline">
-                      <a href="mailto:rapellisaiteja999@gmail.com">Contact Me</a>
-                    </Button>
-                  </div>
+                  <Button asChild variant="outline">
+                    <Link to="/contact">Contact Me</Link>
+                  </Button>
                 </div>
               </div>
               

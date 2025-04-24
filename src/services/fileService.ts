@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 
@@ -13,13 +12,13 @@ export interface FileUploadResult {
   isLinkActive?: boolean;
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
 
 export const uploadFile = async (file: File): Promise<FileUploadResult> => {
   try {
     // Check file size before attempting to upload
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error(`File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 100MB`);
+      throw new Error(`File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 2GB`);
     }
     
     // Check if user is authenticated

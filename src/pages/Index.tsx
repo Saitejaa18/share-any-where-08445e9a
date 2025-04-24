@@ -90,7 +90,7 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-semibold mb-3">Easy Upload</h3>
               <p className="text-muted-foreground">
-                Drag and drop your files or select them from your device. Supports files up to 100MB.
+                Drag and drop your files or select them from your device. Supports files up to 2GB.
               </p>
             </div>
             

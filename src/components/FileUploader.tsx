@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,7 +21,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB in bytes
+  const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -49,9 +48,8 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   };
 
   const handleFile = async (file: File) => {
-    // Check file size before attempting to upload
     if (file.size > MAX_FILE_SIZE) {
-      const errorMessage = `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 100MB`;
+      const errorMessage = `File size (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB) exceeds the maximum allowed size of 2GB`;
       setError(errorMessage);
       toast({
         variant: "destructive",
@@ -66,7 +64,6 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
     setError(null);
     
     try {
-      // Simulate progress while actually uploading
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 90) {
@@ -77,14 +74,11 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
         });
       }, 300);
       
-      // Upload the file to Supabase
       const fileData = await uploadFile(file);
       
-      // Complete the progress bar
       clearInterval(progressInterval);
       setProgress(100);
       
-      // Update state and show success dialog
       setUploadedFile(fileData);
       onFileUpload(fileData);
       setShowSuccessDialog(true);
@@ -139,7 +133,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
               <span className="text-primary">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Maximum file size: 100MB
+              Maximum file size: 2GB
             </p>
           </div>
           <Button

@@ -12,11 +12,15 @@ export type Database = {
       file_shares: {
         Row: {
           created_at: string
+          description: string | null
+          download_limit: number | null
           downloads: number
+          expiry_date: string | null
           file_path: string
           file_size: number
           file_type: string
           filename: string
+          folder_id: string | null
           id: string
           is_link_active: boolean
           max_downloads: number
@@ -25,11 +29,15 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
+          download_limit?: number | null
           downloads?: number
+          expiry_date?: string | null
           file_path: string
           file_size: number
           file_type: string
           filename: string
+          folder_id?: string | null
           id?: string
           is_link_active?: boolean
           max_downloads?: number
@@ -38,15 +46,54 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
+          download_limit?: number | null
           downloads?: number
+          expiry_date?: string | null
           file_path?: string
           file_size?: number
           file_type?: string
           filename?: string
+          folder_id?: string | null
           id?: string
           is_link_active?: boolean
           max_downloads?: number
           share_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_shares_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []

@@ -21,7 +21,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
   const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
 
   const handleFile = async (file: File) => {
     if (file.size > MAX_FILE_SIZE) {
-      const errorMessage = `File size (${(file.size / (1024 * 1024 * 1024)).toFixed(2)}GB) exceeds the maximum allowed size of 2GB`;
+      const errorMessage = `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 50MB`;
       setError(errorMessage);
       toast({
         variant: "destructive",
@@ -133,7 +133,7 @@ export const FileUploader = ({ onFileUpload }: FileUploaderProps) => {
               <span className="text-primary">Click to upload</span> or drag and drop
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Maximum file size: 2GB
+              Maximum file size: 50MB
             </p>
           </div>
           <Button

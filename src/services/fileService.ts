@@ -10,29 +10,29 @@ export interface FileUploadResult {
   shareableLink: string;
   uploadedAt: string;
   isLinkActive?: boolean;
+  description?: string;
+  folder_id?: string;
+  expiry_date?: string;
+  download_limit?: number;
 }
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
 export const uploadFile = async (file: File): Promise<FileUploadResult> => {
   try {
-    // Check file size before attempting to upload
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error(`File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 2GB`);
+      throw new Error(`File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the maximum allowed size of 50MB`);
     }
     
-    // Check if user is authenticated
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error("You must be logged in to upload files");
     }
 
-    // Generate a unique ID for the file
     const fileId = uuidv4();
     const fileExtension = file.name.split('.').pop();
     const filePath = `${session.user.id}/${fileId}.${fileExtension}`;
     
-    // Upload file to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('files')
       .upload(filePath, file);
@@ -41,10 +41,8 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
       throw new Error(`Error uploading file: ${uploadError.message}`);
     }
     
-    // Generate a share ID (shorter, URL-friendly)
     const shareId = fileId.split('-')[0] + uuidv4().split('-')[0];
     
-    // Store file metadata in database
     const { error: dbError } = await supabase
       .from('file_shares')
       .insert({
@@ -63,10 +61,8 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
       throw new Error(`Error storing file metadata: ${dbError.message}`);
     }
     
-    // Create the shareable link
     const shareableLink = `${window.location.origin}/download/${shareId}`;
     
-    // Get a URL for the file (valid for a short time)
     const { data: { publicUrl } } = supabase.storage
       .from('files')
       .getPublicUrl(filePath);
@@ -89,13 +85,11 @@ export const uploadFile = async (file: File): Promise<FileUploadResult> => {
 
 export const getUserFiles = async () => {
   try {
-    // Get current user session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       return [];
     }
     
-    // Only retrieve files for the current user
     const { data: files, error } = await supabase
       .from('file_shares')
       .select('*')
@@ -139,7 +133,6 @@ export const getFileByShareId = async (shareId: string) => {
       throw new Error("File not found or link expired");
     }
     
-    // Increment download counter and update link status
     const { error: updateError } = await supabase
       .from('file_shares')
       .update({ 
@@ -170,4 +163,54 @@ export const getFileByShareId = async (shareId: string) => {
     console.error("Error fetching file:", error);
     throw error;
   }
+};
+
+export const createFolder = async (name: string, description?: string) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("You must be logged in to create folders");
+  }
+
+  const { data, error } = await supabase
+    .from('folders')
+    .insert({
+      name,
+      description,
+      user_id: session.user.id
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
+export const getFolders = async () => {
+  const { data: folders, error } = await supabase
+    .from('folders')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return folders;
+};
+
+export const updateFileMetadata = async (
+  fileId: string, 
+  updates: {
+    description?: string;
+    folder_id?: string | null;
+    expiry_date?: string | null;
+    download_limit?: number;
+  }
+) => {
+  const { data, error } = await supabase
+    .from('file_shares')
+    .update(updates)
+    .eq('id', fileId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 };
